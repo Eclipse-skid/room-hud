@@ -7,29 +7,114 @@
 <style>
   html, body { margin: 0; overflow: hidden; background: #000; height: 100%; }
   #overlay {
-    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%; overflow-y: auto;
+    display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
     font-family: 'Courier New', monospace; color: #4df0ff; text-align: center;
     background: radial-gradient(circle at center, #001018 0%, #000 100%);
+    z-index: 10; padding: 30px 20px; box-sizing: border-box;
   }
-  #overlay h1 { font-size: 22px; letter-spacing: 2px; margin-bottom: 8px; text-shadow: 0 0 12px #4df0ff; }
-  #overlay p { font-size: 14px; color: #7fd8ff; max-width: 320px; line-height: 1.5; }
-  #enterAR {
-    margin-top: 24px; padding: 14px 36px; font-size: 16px; letter-spacing: 1px;
+  #overlay h1 { font-size: 22px; letter-spacing: 2px; margin-bottom: 6px; text-shadow: 0 0 12px #4df0ff; }
+  #overlay h2 { font-size: 14px; letter-spacing: 1px; margin: 22px 0 4px; color: #eafcff; }
+  #overlay p { font-size: 13px; color: #7fd8ff; max-width: 360px; line-height: 1.5; margin: 8px 0; }
+  #overlay a { color: #4df0ff; }
+  #overlay label { font-size: 12px; color: #7fd8ff; display: block; margin: 14px 0 4px; }
+  #overlay input {
+    width: 320px; max-width: 80vw; padding: 10px; background: rgba(77,240,255,0.06);
+    border: 1px solid #4df0ff; color: #eafcff; font-family: inherit; font-size: 13px; border-radius: 4px;
+  }
+  .actionBtn {
+    margin-top: 14px; padding: 10px 26px; font-size: 13px; letter-spacing: 1px;
     background: rgba(77,240,255,0.08); border: 1px solid #4df0ff; color: #4df0ff;
     border-radius: 4px; cursor: pointer; font-family: inherit;
   }
-  #enterAR:hover { background: rgba(77,240,255,0.2); }
-  #unsupported { display: none; color: #ff6b6b; margin-top: 16px; font-size: 13px; max-width: 320px; }
+  .actionBtn:hover { background: rgba(77,240,255,0.2); }
+  #enterAR { margin-top: 26px; padding: 14px 36px; font-size: 16px; }
+  #unsupported { display: none; color: #ff6b6b; margin-top: 14px; font-size: 12px; max-width: 340px; }
+  #keyNote { font-size: 11px; color: #557; max-width: 340px; margin-top: 4px; }
+  #spotifyStatus { font-size: 12px; margin-top: 8px; color: #7fe8ff; }
+  #spotifyStatus.connected { color: #6dff9e; }
+  hr.sep { width: 320px; max-width: 80vw; border: none; border-top: 1px solid rgba(77,240,255,0.2); margin-top: 24px; }
+
+  #arOverlay { display: none; position: fixed; inset: 0; pointer-events: none; font-family: 'Courier New', monospace; color: #eafcff; }
+  .arBtn { pointer-events: auto; background: rgba(0,20,30,0.55); border: 1px solid #4df0ff; color: #4df0ff; padding: 10px 18px; border-radius: 4px; font-family: inherit; font-size: 13px; }
+  #calibrationPanel {
+    position: absolute; top: 6%; left: 50%; transform: translateX(-50%);
+    width: 74vw; max-width: 460px; text-align: center; pointer-events: auto;
+    background: rgba(0,20,30,0.55); border: 1px solid rgba(77,240,255,0.5); border-radius: 8px; padding: 14px;
+  }
+  #calibrationPanel p { font-size: 12px; color: #7fe8ff; margin: 6px 0; }
+  #calibrationPanel .row { display: flex; gap: 10px; justify-content: center; margin-top: 10px; }
+  #micBtn {
+    position: absolute; bottom: 6%; left: 50%; transform: translateX(-50%);
+    pointer-events: auto; width: 84px; height: 84px; border-radius: 50%;
+    background: rgba(0,20,30,0.55); border: 2px solid #4df0ff; color: #4df0ff;
+    font-size: 28px; display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 0 18px rgba(77,240,255,0.5);
+  }
+  #micBtn.listening { background: rgba(255,80,80,0.25); border-color: #ff6b6b; color: #ff6b6b; box-shadow: 0 0 22px rgba(255,80,80,0.6); }
+  #micBtn.thinking { border-color: #ffd24d; color: #ffd24d; }
+  #transcriptBox {
+    position: absolute; bottom: 20%; left: 50%; transform: translateX(-50%);
+    width: 70vw; max-width: 480px; text-align: center; font-size: 13px;
+    color: #7fe8ff; background: rgba(0,20,30,0.4); border: 1px solid rgba(77,240,255,0.4);
+    border-radius: 6px; padding: 8px 14px; pointer-events: none;
+  }
+  #exitBtn { position: absolute; top: 4%; right: 4%; pointer-events: auto; }
+  #spotifyControls {
+    position: absolute; bottom: 6%; left: 6%; display: none; gap: 8px; pointer-events: auto;
+  }
+  #spotifyControls button { width: 46px; height: 46px; border-radius: 50%; font-size: 16px; }
+  #grabHint {
+    position: absolute; top: 4%; left: 4%; font-size: 11px; color: rgba(127,232,255,0.7);
+    background: rgba(0,20,30,0.4); border: 1px solid rgba(77,240,255,0.3); border-radius: 6px; padding: 6px 10px;
+    pointer-events: none;
+  }
 </style>
 </head>
 <body>
 
 <div id="overlay">
   <h1>◈ ROOM HUD ◈</h1>
-  <p>Passthrough holographic interface. Put on your headset in the Quest Browser, then tap below to enter your room.</p>
-  <button id="enterAR">ENTER AR</button>
+  <p>Passthrough HUD with a room scan, grabbable panels, voice Q&A, and Spotify now-playing.</p>
+
+  <h2>VOICE (optional)</h2>
+  <label for="apiKey">Google AI Studio API key — free, no card (<a href="https://aistudio.google.com/apikey" target="_blank">get one here</a>)</label>
+  <input type="password" id="apiKey" placeholder="AIza... (leave blank to skip voice)">
+  <div id="keyNote">Kept in memory only for this session.</div>
+
+  <hr class="sep">
+  <h2>SPOTIFY (optional)</h2>
+  <label for="spotifyClientId">Spotify Client ID (<a href="https://developer.spotify.com/dashboard" target="_blank">from your Spotify app</a>)</label>
+  <input type="text" id="spotifyClientId" placeholder="Paste your Client ID">
+  <button id="connectSpotify" class="actionBtn">CONNECT SPOTIFY</button>
+  <div id="spotifyStatus">Not connected</div>
+
+  <button id="enterAR" class="actionBtn">ENTER AR</button>
   <div id="unsupported">WebXR AR isn't available in this browser. Open this page in the Meta Quest Browser on your headset.</div>
+</div>
+
+<div id="arOverlay">
+  <button id="exitBtn" class="arBtn">EXIT</button>
+  <div id="grabHint">Grip button: grab a panel to move it, or grab its stand orb and pull to resize it</div>
+
+  <div id="calibrationPanel">
+    <p><strong>ROOM SCAN</strong></p>
+    <p>Point your controller at each corner of your room, floor level, and pull the trigger to mark it. Mark at least 3 corners.</p>
+    <p id="pointCount">0 points marked</p>
+    <div class="row">
+      <button id="undoPointBtn" class="arBtn">UNDO</button>
+      <button id="finishScanBtn" class="arBtn">FINISH SCAN</button>
+      <button id="skipScanBtn" class="arBtn">SKIP</button>
+    </div>
+  </div>
+
+  <div id="transcriptBox" style="display:none;">Tap the mic and ask a question.</div>
+  <button id="micBtn" style="display:none;">🎤</button>
+  <div id="spotifyControls">
+    <button id="prevBtn" class="arBtn">⏮</button>
+    <button id="playPauseBtn" class="arBtn">⏯</button>
+    <button id="nextBtn" class="arBtn">⏭</button>
+  </div>
 </div>
 
 <script type="importmap">
@@ -46,22 +131,44 @@ import * as THREE from 'three';
 import { ARButton } from 'three/addons/webxr/ARButton.js';
 
 let camera, scene, renderer;
-let controller;
 const panels = [];
 const clock = new THREE.Clock();
+let hudGroup = null;
+let hudPlaced = false;
+
+let apiKey = '';
+const modelName = 'gemini-2.5-flash';
+let recognition = null;
+let listening = false;
+let lastTranscript = '';
+let lastAnswer = 'Ask me anything.';
+let state = 'idle';
+
+// room scan
+let scanning = true;
+let roomPoints = [];
+let roomMarkers = [];
+let roomOutlineLine = null;
+let roomFloorGrid = null;
+
+// spotify
+let spotifyAccessToken = null;
+let spotifyNowPlaying = { name: 'Not playing', artist: '', isPlaying: false };
+let spotifyPollHandle = null;
 
 init();
+handleSpotifyRedirect();
 
 function init() {
   scene = new THREE.Scene();
-
   camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 40);
 
   renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
   renderer.setPixelRatio(window.devicePixelRatio);
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.xr.enabled = true;
-  renderer.setClearColor(0x000000, 0); // transparent -> passthrough shows through
+  renderer.xr.setReferenceSpaceType('local-floor');
+  renderer.setClearColor(0x000000, 0);
   document.body.appendChild(renderer.domElement);
 
   scene.add(new THREE.AmbientLight(0x88ccff, 1.2));
@@ -69,71 +176,431 @@ function init() {
   dir.position.set(1, 2, 1);
   scene.add(dir);
 
-  buildHUD();
+  setupVoice();
+  setupControllers();
 
-  controller = renderer.xr.getController(0);
-  scene.add(controller);
-  const rayGeo = new THREE.BufferGeometry().setFromPoints([
-    new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, -1)
-  ]);
-  const ray = new THREE.Line(rayGeo, new THREE.LineBasicMaterial({ color: 0x4df0ff }));
-  ray.scale.z = 3;
-  controller.add(ray);
-
+  const overlayRoot = document.getElementById('arOverlay');
   const arButton = ARButton.createButton(renderer, {
-    optionalFeatures: ['local-floor', 'bounded-floor', 'hand-tracking'],
+    optionalFeatures: ['local-floor', 'bounded-floor', 'hand-tracking', 'dom-overlay'],
+    domOverlay: { root: overlayRoot }
   });
   arButton.style.display = 'none';
   document.body.appendChild(arButton);
 
   document.getElementById('enterAR').addEventListener('click', () => {
-    if (arButton.disabled) {
-      document.getElementById('unsupported').style.display = 'block';
-    } else {
-      arButton.click();
-      document.getElementById('overlay').style.display = 'none';
-    }
+    apiKey = document.getElementById('apiKey').value.trim();
+    if (arButton.disabled) { document.getElementById('unsupported').style.display = 'block'; return; }
+    arButton.click();
+    document.getElementById('overlay').style.display = 'none';
+    overlayRoot.style.display = 'block';
+    scanning = true;
+    hudPlaced = false;
+    document.getElementById('calibrationPanel').style.display = 'block';
+    document.getElementById('micBtn').style.display = 'none';
+    document.getElementById('transcriptBox').style.display = 'none';
+    document.getElementById('spotifyControls').style.display = 'none';
   });
+
+  document.getElementById('exitBtn').addEventListener('click', () => {
+    const session = renderer.xr.getSession();
+    if (session) session.end();
+  });
+
+  document.getElementById('undoPointBtn').addEventListener('click', undoRoomPoint);
+  document.getElementById('finishScanBtn').addEventListener('click', finishScan);
+  document.getElementById('skipScanBtn').addEventListener('click', finishScan);
+  document.getElementById('micBtn').addEventListener('click', toggleListening);
+  document.getElementById('connectSpotify').addEventListener('click', startSpotifyAuth);
+  document.getElementById('prevBtn').addEventListener('click', () => spotifyControl('previous'));
+  document.getElementById('playPauseBtn').addEventListener('click', () => spotifyControl(spotifyNowPlaying.isPlaying ? 'pause' : 'play'));
+  document.getElementById('nextBtn').addEventListener('click', () => spotifyControl('next'));
 
   renderer.xr.addEventListener('sessionend', () => {
     document.getElementById('overlay').style.display = 'flex';
+    overlayRoot.style.display = 'none';
+    if (recognition && listening) recognition.stop();
+    clearRoomScan();
+    stopSpotifyPolling();
   });
 
   window.addEventListener('resize', onResize);
   renderer.setAnimationLoop(render);
 }
 
+// ---------- controllers: room-scan tapping + grab ----------
+
+const grabState = new Map(); // controller.uuid -> { kind, entry, initialDistance, initialScale }
+
+function setupControllers() {
+  for (let i = 0; i < 2; i++) {
+    const controller = renderer.xr.getController(i);
+    scene.add(controller);
+    const rayGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, -1)]);
+    const ray = new THREE.Line(rayGeo, new THREE.LineBasicMaterial({ color: 0x4df0ff }));
+    ray.scale.z = 3;
+    controller.add(ray);
+    controller.addEventListener('select', onControllerSelect);
+    controller.addEventListener('squeezestart', (e) => onGrabStart(e.target));
+    controller.addEventListener('squeezeend', (e) => onGrabEnd(e.target));
+  }
+}
+
+function onControllerSelect(event) {
+  if (!scanning) return;
+  addRoomPointFromController(event.target);
+}
+
+function worldPos(obj) { const v = new THREE.Vector3(); obj.getWorldPosition(v); return v; }
+
+function onGrabStart(controller) {
+  if (scanning) return;
+  const cPos = worldPos(controller);
+  let best = null, bestDist = 0.28;
+  panels.forEach(p => {
+    if (!p.mesh) return;
+    const d = cPos.distanceTo(worldPos(p.mesh));
+    if (d < bestDist) { bestDist = d; best = { kind: 'panel', entry: p }; }
+    if (p.standOrb) {
+      const ds = cPos.distanceTo(worldPos(p.standOrb));
+      if (ds < bestDist) { bestDist = ds; best = { kind: 'stand', entry: p }; }
+    }
+  });
+  if (!best) return;
+
+  if (best.kind === 'panel') {
+    controller.attach(best.entry.mesh);
+    grabState.set(controller.uuid, { kind: 'panel', entry: best.entry, controller });
+  } else {
+    const initialDistance = Math.max(0.05, worldPos(best.entry.standOrb).distanceTo(worldPos(best.entry.mesh)));
+    controller.attach(best.entry.standGroup);
+    grabState.set(controller.uuid, {
+      kind: 'stand', entry: best.entry, controller,
+      initialDistance, initialScale: best.entry.mesh.scale.x
+    });
+  }
+}
+
+function onGrabEnd(controller) {
+  const g = grabState.get(controller.uuid);
+  if (!g) return;
+  if (g.kind === 'panel') scene.attach(g.entry.mesh);
+  else scene.attach(g.entry.standGroup);
+  grabState.delete(controller.uuid);
+}
+
+function updateGrabsAndTethers() {
+  grabState.forEach(g => {
+    if (g.kind === 'stand') {
+      const newDist = Math.max(0.05, worldPos(g.entry.standOrb).distanceTo(worldPos(g.entry.mesh)));
+      const scale = THREE.MathUtils.clamp(g.initialScale * (newDist / g.initialDistance), 0.4, 3.0);
+      g.entry.mesh.scale.setScalar(scale);
+    }
+  });
+  panels.forEach(p => {
+    if (!p.tether || !p.standOrb || !p.mesh) return;
+    const a = worldPos(p.standOrb);
+    const b = worldPos(p.mesh);
+    const positions = p.tether.geometry.attributes.position;
+    positions.setXYZ(0, a.x, a.y, a.z);
+    positions.setXYZ(1, b.x, b.y, b.z);
+    positions.needsUpdate = true;
+  });
+}
+
+// ---------- room scan (corner tapping) ----------
+
+function addRoomPointFromController(controller) {
+  const origin = new THREE.Vector3();
+  const dir = new THREE.Vector3(0, 0, -1);
+  controller.getWorldPosition(origin);
+  dir.applyQuaternion(controller.getWorldQuaternion(new THREE.Quaternion()));
+  if (Math.abs(dir.y) < 1e-4) return;
+  const t = -origin.y / dir.y;
+  if (t <= 0) return;
+  const point = origin.clone().addScaledVector(dir, t);
+  point.y = 0.01;
+
+  roomPoints.push(point);
+  const marker = new THREE.Mesh(new THREE.SphereGeometry(0.03, 16, 16), new THREE.MeshBasicMaterial({ color: 0x4df0ff }));
+  marker.position.copy(point);
+  scene.add(marker);
+  roomMarkers.push(marker);
+
+  updateOutlineLine();
+  document.getElementById('pointCount').textContent = roomPoints.length + ' point' + (roomPoints.length === 1 ? '' : 's') + ' marked';
+}
+
+function undoRoomPoint() {
+  if (roomPoints.length === 0) return;
+  roomPoints.pop();
+  const m = roomMarkers.pop();
+  if (m) scene.remove(m);
+  updateOutlineLine();
+  document.getElementById('pointCount').textContent = roomPoints.length + ' points marked';
+}
+
+function updateOutlineLine() {
+  if (roomOutlineLine) { scene.remove(roomOutlineLine); roomOutlineLine = null; }
+  if (roomPoints.length < 2) return;
+  const geo = new THREE.BufferGeometry().setFromPoints(roomPoints.map(p => p.clone()));
+  roomOutlineLine = new THREE.Line(geo, new THREE.LineBasicMaterial({ color: 0x4df0ff, transparent: true, opacity: 0.8 }));
+  scene.add(roomOutlineLine);
+}
+
+function finishScan() {
+  scanning = false;
+  document.getElementById('calibrationPanel').style.display = 'none';
+  document.getElementById('micBtn').style.display = apiKey ? 'flex' : 'none';
+  document.getElementById('transcriptBox').style.display = 'block';
+  document.getElementById('spotifyControls').style.display = spotifyAccessToken ? 'flex' : 'none';
+
+  if (roomPoints.length >= 3) {
+    const closedPts = [...roomPoints.map(p => p.clone()), roomPoints[0].clone()];
+    if (roomOutlineLine) scene.remove(roomOutlineLine);
+    const geo = new THREE.BufferGeometry().setFromPoints(closedPts);
+    roomOutlineLine = new THREE.Line(geo, new THREE.LineBasicMaterial({ color: 0x4df0ff, transparent: true, opacity: 0.9 }));
+    scene.add(roomOutlineLine);
+    buildFloorGrid(roomPoints);
+  }
+
+  placeHud();
+  buildHUD();
+  if (spotifyAccessToken) startSpotifyPolling();
+}
+
+function buildFloorGrid(points) {
+  let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+  points.forEach(p => { minX = Math.min(minX, p.x); maxX = Math.max(maxX, p.x); minZ = Math.min(minZ, p.z); maxZ = Math.max(maxZ, p.z); });
+  const w = Math.max(0.5, maxX - minX), d = Math.max(0.5, maxZ - minZ);
+  const grid = new THREE.GridHelper(Math.max(w, d), Math.round(Math.max(w, d) / 0.3), 0x4df0ff, 0x123);
+  grid.material.transparent = true; grid.material.opacity = 0.25;
+  grid.position.set((minX + maxX) / 2, 0.002, (minZ + maxZ) / 2);
+  scene.add(grid);
+  roomFloorGrid = grid;
+}
+
+function clearRoomScan() {
+  roomMarkers.forEach(m => scene.remove(m));
+  roomMarkers = []; roomPoints = [];
+  if (roomOutlineLine) { scene.remove(roomOutlineLine); roomOutlineLine = null; }
+  if (roomFloorGrid) { scene.remove(roomFloorGrid); roomFloorGrid = null; }
+  if (hudGroup) { scene.remove(hudGroup); hudGroup = null; }
+  panels.forEach(p => { if (p.standGroup) scene.remove(p.standGroup); if (p.tether) scene.remove(p.tether); });
+  panels.length = 0;
+  hudPlaced = false;
+}
+
+// ---------- HUD placement ----------
+
+function placeHud() {
+  if (hudPlaced) return;
+  const camPos = new THREE.Vector3(); const camDir = new THREE.Vector3();
+  camera.getWorldPosition(camPos); camera.getWorldDirection(camDir);
+  camDir.y = 0; camDir.normalize();
+  const eyeHeight = Math.max(1.2, camPos.y);
+  const anchor = camPos.clone().addScaledVector(camDir, 1.1);
+  anchor.y = eyeHeight - 0.15;
+  hudGroup = new THREE.Group();
+  hudGroup.position.copy(anchor);
+  hudGroup.lookAt(camPos.x, anchor.y, camPos.z);
+  scene.add(hudGroup);
+  hudPlaced = true;
+}
+
+// ---------- voice ----------
+
+function setupVoice() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { console.warn('SpeechRecognition not supported.'); return; }
+  recognition = new SR();
+  recognition.lang = 'en-US'; recognition.interimResults = true; recognition.continuous = false;
+  recognition.onresult = (e) => {
+    let text = ''; for (let i = 0; i < e.results.length; i++) text += e.results[i][0].transcript;
+    lastTranscript = text; document.getElementById('transcriptBox').textContent = text;
+  };
+  recognition.onend = () => {
+    listening = false; document.getElementById('micBtn').classList.remove('listening');
+    if (lastTranscript.trim().length > 0) askQuestion(lastTranscript.trim());
+  };
+  recognition.onerror = (e) => {
+    listening = false; document.getElementById('micBtn').classList.remove('listening');
+    document.getElementById('transcriptBox').textContent = 'Mic error: ' + e.error + '. Tap to try again.';
+  };
+}
+
+function toggleListening() {
+  if (!recognition) { document.getElementById('transcriptBox').textContent = 'Voice recognition not supported.'; return; }
+  if (listening) { recognition.stop(); return; }
+  if (!apiKey) { document.getElementById('transcriptBox').textContent = 'No API key set.'; return; }
+  lastTranscript = ''; window.speechSynthesis.cancel();
+  state = 'listening'; listening = true;
+  document.getElementById('micBtn').classList.add('listening');
+  document.getElementById('micBtn').classList.remove('thinking');
+  document.getElementById('transcriptBox').textContent = 'Listening...';
+  try { recognition.start(); } catch (err) {}
+}
+
+async function askQuestion(question) {
+  state = 'thinking';
+  document.getElementById('micBtn').classList.add('thinking');
+  document.getElementById('transcriptBox').textContent = 'Thinking...';
+  try {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+    const res = await fetch(url, {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: 'You are a concise voice assistant inside an AR heads-up display, like J.A.R.V.I.S. Answer in 1-3 short spoken sentences. No markdown, no lists.' }] },
+        contents: [{ parts: [{ text: question }] }]
+      })
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message || 'API error');
+    const answer = (data.candidates?.[0]?.content?.parts || []).map(p => p.text || '').join(' ').trim() || '(no response)';
+    lastAnswer = answer; document.getElementById('transcriptBox').textContent = answer; speak(answer);
+  } catch (err) {
+    lastAnswer = 'Error: ' + err.message; document.getElementById('transcriptBox').textContent = lastAnswer;
+  } finally {
+    state = 'idle'; document.getElementById('micBtn').classList.remove('thinking');
+  }
+}
+
+function speak(text) {
+  state = 'speaking';
+  const utter = new SpeechSynthesisUtterance(text);
+  utter.rate = 1.02; utter.pitch = 1.0;
+  utter.onend = () => { state = 'idle'; };
+  window.speechSynthesis.speak(utter);
+}
+
+// ---------- spotify ----------
+
+function base64url(bytes) {
+  return btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+async function sha256(plain) {
+  const data = new TextEncoder().encode(plain);
+  const digest = await crypto.subtle.digest('SHA-256', data);
+  return new Uint8Array(digest);
+}
+function randomString(len) {
+  const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  const values = crypto.getRandomValues(new Uint8Array(len));
+  return Array.from(values).map(v => possible[v % possible.length]).join('');
+}
+
+async function startSpotifyAuth() {
+  const clientId = document.getElementById('spotifyClientId').value.trim();
+  if (!clientId) { document.getElementById('spotifyStatus').textContent = 'Enter your Spotify Client ID first.'; return; }
+  const verifier = randomString(64);
+  sessionStorage.setItem('sp_verifier', verifier);
+  sessionStorage.setItem('sp_client_id', clientId);
+  const challenge = base64url(await sha256(verifier));
+  const redirectUri = window.location.origin + window.location.pathname;
+  const scope = 'user-read-currently-playing user-read-playback-state user-modify-playback-state';
+  const params = new URLSearchParams({
+    response_type: 'code', client_id: clientId, scope, redirect_uri: redirectUri,
+    code_challenge_method: 'S256', code_challenge: challenge
+  });
+  window.location.href = 'https://accounts.spotify.com/authorize?' + params.toString();
+}
+
+async function handleSpotifyRedirect() {
+  const params = new URLSearchParams(window.location.search);
+  const code = params.get('code');
+  if (!code) return;
+  const verifier = sessionStorage.getItem('sp_verifier');
+  const clientId = sessionStorage.getItem('sp_client_id');
+  if (!verifier || !clientId) return;
+  const redirectUri = window.location.origin + window.location.pathname;
+  try {
+    const res = await fetch('https://accounts.spotify.com/api/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        grant_type: 'authorization_code', code, redirect_uri: redirectUri,
+        client_id: clientId, code_verifier: verifier
+      })
+    });
+    const data = await res.json();
+    if (data.access_token) {
+      spotifyAccessToken = data.access_token;
+      document.getElementById('spotifyClientId').value = clientId;
+      const statusEl = document.getElementById('spotifyStatus');
+      statusEl.textContent = 'Connected'; statusEl.classList.add('connected');
+    }
+  } catch (err) { console.warn('Spotify token exchange failed', err); }
+  window.history.replaceState({}, document.title, redirectUri);
+}
+
+async function fetchNowPlaying() {
+  if (!spotifyAccessToken) return;
+  try {
+    const res = await fetch('https://api.spotify.com/v1/me/player/currently-playing', {
+      headers: { Authorization: 'Bearer ' + spotifyAccessToken }
+    });
+    if (res.status === 204) { spotifyNowPlaying = { name: 'Nothing playing', artist: '', isPlaying: false }; return; }
+    const data = await res.json();
+    if (data && data.item) {
+      spotifyNowPlaying = {
+        name: data.item.name,
+        artist: (data.item.artists || []).map(a => a.name).join(', '),
+        isPlaying: !!data.is_playing
+      };
+    }
+  } catch (err) { console.warn('Spotify poll failed', err); }
+}
+
+function startSpotifyPolling() {
+  fetchNowPlaying();
+  spotifyPollHandle = setInterval(fetchNowPlaying, 5000);
+}
+function stopSpotifyPolling() {
+  if (spotifyPollHandle) clearInterval(spotifyPollHandle);
+  spotifyPollHandle = null;
+}
+async function spotifyControl(action) {
+  if (!spotifyAccessToken) return;
+  const map = { play: ['PUT', '/me/player/play'], pause: ['PUT', '/me/player/pause'], next: ['POST', '/me/player/next'], previous: ['POST', '/me/player/previous'] };
+  const [method, path] = map[action];
+  try {
+    await fetch('https://api.spotify.com' + path, { method, headers: { Authorization: 'Bearer ' + spotifyAccessToken } });
+    setTimeout(fetchNowPlaying, 400);
+  } catch (err) { console.warn('Spotify control failed', err); }
+}
+
+// ---------- HUD panels ----------
+
 function makeHoloPanelTexture(drawFn, w = 512, h = 320) {
-  const canvas = document.createElement('canvas');
-  canvas.width = w; canvas.height = h;
-  const ctx = canvas.getContext('2d');
-  drawFn(ctx, w, h);
-  const tex = new THREE.CanvasTexture(canvas);
-  tex.needsUpdate = true;
+  const canvas = document.createElement('canvas'); canvas.width = w; canvas.height = h;
+  const ctx = canvas.getContext('2d'); drawFn(ctx, w, h);
+  const tex = new THREE.CanvasTexture(canvas); tex.needsUpdate = true;
   return { canvas, ctx, tex };
 }
-
 function panelBase(ctx, w, h, title) {
   ctx.clearRect(0, 0, w, h);
-  ctx.strokeStyle = 'rgba(77,240,255,0.9)';
-  ctx.lineWidth = 3;
-  ctx.strokeRect(6, 6, w - 12, h - 12);
-  ctx.fillStyle = 'rgba(0,30,40,0.35)';
-  ctx.fillRect(6, 6, w - 12, h - 12);
-  ctx.fillStyle = 'rgba(77,240,255,0.9)';
-  ctx.font = 'bold 26px Courier New';
-  ctx.fillText(title, 24, 44);
-  ctx.strokeStyle = 'rgba(77,240,255,0.5)';
-  ctx.beginPath(); ctx.moveTo(20, 56); ctx.lineTo(w - 20, 56); ctx.stroke();
+  ctx.strokeStyle = 'rgba(77,240,255,0.9)'; ctx.lineWidth = 3; ctx.strokeRect(6, 6, w - 12, h - 12);
+  ctx.fillStyle = 'rgba(0,30,40,0.35)'; ctx.fillRect(6, 6, w - 12, h - 12);
+  ctx.fillStyle = 'rgba(77,240,255,0.9)'; ctx.font = 'bold 26px Courier New'; ctx.fillText(title, 24, 44);
+  ctx.strokeStyle = 'rgba(77,240,255,0.5)'; ctx.beginPath(); ctx.moveTo(20, 56); ctx.lineTo(w - 20, 56); ctx.stroke();
+}
+function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
+  const words = text.split(' '); let line = ''; let cy = y;
+  for (const word of words) {
+    const test = line + word + ' ';
+    if (ctx.measureText(test).width > maxWidth && line) { ctx.fillText(line, x, cy); line = word + ' '; cy += lineHeight; }
+    else line = test;
+  }
+  ctx.fillText(line, x, cy); return cy;
 }
 
-function addPanel({ position, rotationY = 0, width = 0.6, height = 0.375, update, title }) {
+function addPanel({ localPosition, rotationY = 0, width = 0.5, height = 0.32, update, title }) {
   const { canvas, ctx, tex } = makeHoloPanelTexture((c, w, h) => panelBase(c, w, h, title));
   const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, opacity: 0.92, side: THREE.DoubleSide });
   const geo = new THREE.PlaneGeometry(width, height);
   const mesh = new THREE.Mesh(geo, mat);
-  mesh.position.copy(position);
-  mesh.rotation.y = rotationY;
+  mesh.position.copy(hudGroup.localToWorld(localPosition.clone()));
+  mesh.quaternion.copy(hudGroup.quaternion);
+  mesh.rotateY(rotationY);
   scene.add(mesh);
 
   const glowMat = new THREE.MeshBasicMaterial({ color: 0x4df0ff, transparent: true, opacity: 0.08, side: THREE.DoubleSide });
@@ -141,67 +608,74 @@ function addPanel({ position, rotationY = 0, width = 0.6, height = 0.375, update
   glow.position.z = -0.002;
   mesh.add(glow);
 
-  panels.push({ ctx, canvas, tex, title, update, mesh });
-  return mesh;
+  const floorPos = new THREE.Vector3(mesh.position.x, 0.01, mesh.position.z);
+  const standGroup = new THREE.Group();
+  standGroup.position.copy(floorPos);
+  const cone = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.14, 12), new THREE.MeshBasicMaterial({ color: 0x1a5a66, transparent: true, opacity: 0.85 }));
+  cone.position.y = 0.07;
+  standGroup.add(cone);
+  const orb = new THREE.Mesh(new THREE.SphereGeometry(0.035, 16, 16), new THREE.MeshBasicMaterial({ color: 0x4df0ff }));
+  orb.position.y = 0.15;
+  standGroup.add(orb);
+  scene.add(standGroup);
+
+  const tetherGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
+  const tether = new THREE.Line(tetherGeo, new THREE.LineBasicMaterial({ color: 0x4df0ff, transparent: true, opacity: 0.5 }));
+  scene.add(tether);
+
+  panels.push({ ctx, canvas, tex, title, update, mesh, standGroup, standOrb: orb, tether });
 }
 
 function buildHUD() {
   addPanel({
-    title: 'CHRONO',
-    position: new THREE.Vector3(-0.5, 1.5, -1.0),
-    rotationY: 0.35,
-    width: 0.5, height: 0.32,
+    title: 'CHRONO', localPosition: new THREE.Vector3(-0.45, 0.08, 0), rotationY: 0.3, width: 0.42, height: 0.26,
     update: (ctx, w, h) => {
       panelBase(ctx, w, h, 'CHRONO');
       const now = new Date();
-      ctx.fillStyle = '#eafcff';
-      ctx.font = 'bold 44px Courier New';
-      ctx.fillText(now.toLocaleTimeString(), 24, 130);
-      ctx.font = '20px Courier New';
-      ctx.fillStyle = 'rgba(77,240,255,0.85)';
-      ctx.fillText(now.toDateString(), 24, 170);
+      ctx.fillStyle = '#eafcff'; ctx.font = 'bold 40px Courier New'; ctx.fillText(now.toLocaleTimeString(), 24, 120);
+      ctx.font = '18px Courier New'; ctx.fillStyle = 'rgba(77,240,255,0.85)'; ctx.fillText(now.toDateString(), 24, 155);
     }
   });
 
   addPanel({
-    title: 'SYSTEM STATUS',
-    position: new THREE.Vector3(0, 1.55, -1.15),
-    width: 0.62, height: 0.38,
+    title: 'COMMS', localPosition: new THREE.Vector3(0, 0, 0), width: 0.58, height: 0.36,
     update: (ctx, w, h) => {
-      panelBase(ctx, w, h, 'SYSTEM STATUS');
-      const lines = ['POWER CORE ......... ONLINE', 'PASSTHROUGH ........ ACTIVE', 'HAND TRACKING ...... READY', 'NETWORK ............ LINKED'];
-      ctx.font = '18px Courier New';
-      ctx.fillStyle = '#7fe8ff';
-      lines.forEach((l, i) => ctx.fillText(l, 24, 100 + i * 32));
+      panelBase(ctx, w, h, 'COMMS');
+      ctx.font = '15px Courier New'; ctx.fillStyle = '#ffd24d'; ctx.fillText('STATE: ' + state.toUpperCase(), 24, 85);
+      ctx.fillStyle = '#7fe8ff'; ctx.font = '14px Courier New';
+      wrapText(ctx, 'Q: ' + (lastTranscript || '—'), 24, 122, w - 48, 19);
+      ctx.fillStyle = '#eafcff';
+      wrapText(ctx, 'A: ' + (lastAnswer || '—'), 24, 190, w - 48, 19);
     }
   });
 
   addPanel({
-    title: 'DIAG',
-    position: new THREE.Vector3(0.55, 1.45, -1.0),
-    rotationY: -0.4,
-    width: 0.4, height: 0.3,
+    title: 'DIAG', localPosition: new THREE.Vector3(0.48, 0.06, 0), rotationY: -0.35, width: 0.34, height: 0.24,
     update: (ctx, w, h) => {
       panelBase(ctx, w, h, 'DIAG');
       const t = performance.now() / 1000;
       const pulse = (Math.sin(t * 2) * 0.5 + 0.5) * 100;
-      ctx.font = '18px Courier New';
-      ctx.fillStyle = '#7fe8ff';
-      ctx.fillText('FPS  ' + (1 / Math.max(0.001, clock.getDelta())).toFixed(0), 24, 90);
-      ctx.fillText('SIG  ' + pulse.toFixed(0) + '%', 24, 120);
-      ctx.strokeStyle = 'rgba(77,240,255,0.8)';
-      ctx.strokeRect(24, 140, w - 48, 14);
-      ctx.fillStyle = 'rgba(77,240,255,0.6)';
-      ctx.fillRect(24, 140, (w - 48) * (pulse / 100), 14);
+      ctx.font = '16px Courier New'; ctx.fillStyle = '#7fe8ff';
+      ctx.fillText('MIC   ' + (listening ? 'LIVE' : 'OFF'), 20, 80);
+      ctx.fillText('SIG   ' + pulse.toFixed(0) + '%', 20, 105);
+      ctx.strokeStyle = 'rgba(77,240,255,0.8)'; ctx.strokeRect(20, 120, w - 40, 12);
+      ctx.fillStyle = 'rgba(77,240,255,0.6)'; ctx.fillRect(20, 120, (w - 40) * (pulse / 100), 12);
     }
   });
 
-  const ringGeo = new THREE.RingGeometry(0.06, 0.075, 48);
-  const ringMat = new THREE.MeshBasicMaterial({ color: 0x4df0ff, transparent: true, opacity: 0.8, side: THREE.DoubleSide });
-  const ring = new THREE.Mesh(ringGeo, ringMat);
-  ring.position.set(0, 1.55, -1.16);
-  scene.add(ring);
-  panels.push({ ring });
+  if (spotifyAccessToken) {
+    addPanel({
+      title: 'SPOTIFY', localPosition: new THREE.Vector3(-0.15, -0.32, 0), width: 0.5, height: 0.26,
+      update: (ctx, w, h) => {
+        panelBase(ctx, w, h, 'SPOTIFY');
+        ctx.font = 'bold 18px Courier New'; ctx.fillStyle = '#6dff9e';
+        wrapText(ctx, spotifyNowPlaying.name, 24, 90, w - 48, 22);
+        ctx.font = '14px Courier New'; ctx.fillStyle = '#7fe8ff';
+        ctx.fillText(spotifyNowPlaying.artist, 24, 130);
+        ctx.fillText(spotifyNowPlaying.isPlaying ? '▶ PLAYING' : '❚❚ PAUSED', 24, 158);
+      }
+    });
+  }
 }
 
 function onResize() {
@@ -211,17 +685,10 @@ function onResize() {
 }
 
 function render() {
-  const t = performance.now() / 1000;
   panels.forEach(p => {
-    if (p.update) {
-      p.update(p.ctx, p.canvas.width, p.canvas.height);
-      p.tex.needsUpdate = true;
-      p.mesh.position.y += Math.sin(t + p.mesh.position.x * 3) * 0.0002;
-    }
-    if (p.ring) {
-      p.ring.rotation.z = t * 0.6;
-    }
+    if (p.update) { p.update(p.ctx, p.canvas.width, p.canvas.height); p.tex.needsUpdate = true; }
   });
+  updateGrabsAndTethers();
   renderer.render(scene, camera);
 }
 </script>
