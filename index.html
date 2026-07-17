@@ -99,10 +99,10 @@
 
   <div id="calibrationPanel">
     <p><strong>ROOM SCAN</strong></p>
-    <p>Point your controller at each corner of your room, floor level, and pull the trigger to mark it. Mark at least 3 corners.</p>
-    <p id="pointCount">0 points marked</p>
+    <p>Checking for the room boundary you already set up in your headset...</p>
+    <p id="pointCount">Checking...</p>
     <div class="row">
-      <button id="undoPointBtn" class="arBtn">UNDO</button>
+      <button id="undoPointBtn" class="arBtn">UNDO POINT</button>
       <button id="finishScanBtn" class="arBtn">FINISH SCAN</button>
       <button id="skipScanBtn" class="arBtn">SKIP</button>
     </div>
@@ -150,6 +150,7 @@ let roomPoints = [];
 let roomMarkers = [];
 let roomOutlineLine = null;
 let roomFloorGrid = null;
+let boundaryChecked = false;
 
 // spotify
 let spotifyAccessToken = null;
@@ -167,7 +168,7 @@ function init() {
   renderer.setPixelRatio(window.devicePixelRatio);
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.xr.enabled = true;
-  renderer.xr.setReferenceSpaceType('local-floor');
+  renderer.xr.setReferenceSpaceType('bounded-floor'); // lets us read the Guardian boundary you already set up
   renderer.setClearColor(0x000000, 0);
   document.body.appendChild(renderer.domElement);
 
@@ -215,6 +216,8 @@ function init() {
   document.getElementById('playPauseBtn').addEventListener('click', () => spotifyControl(spotifyNowPlaying.isPlaying ? 'pause' : 'play'));
   document.getElementById('nextBtn').addEventListener('click', () => spotifyControl('next'));
 
+  renderer.xr.addEventListener('sessionstart', () => { boundaryChecked = false; });
+
   renderer.xr.addEventListener('sessionend', () => {
     document.getElementById('overlay').style.display = 'flex';
     overlayRoot.style.display = 'none';
@@ -229,7 +232,7 @@ function init() {
 
 // ---------- controllers: room-scan tapping + grab ----------
 
-const grabState = new Map(); // controller.uuid -> { kind, entry, initialDistance, initialScale }
+const grabState = new Map();
 
 function setupControllers() {
   for (let i = 0; i < 2; i++) {
@@ -305,6 +308,25 @@ function updateGrabsAndTethers() {
     positions.setXYZ(1, b.x, b.y, b.z);
     positions.needsUpdate = true;
   });
+}
+
+function checkGuardianBoundary() {
+  if (boundaryChecked || !renderer.xr.isPresenting) return;
+  const refSpace = renderer.xr.getReferenceSpace();
+  boundaryChecked = true;
+  if (refSpace && refSpace.boundsGeometry && refSpace.boundsGeometry.length >= 3) {
+    roomPoints = refSpace.boundsGeometry.map(p => new THREE.Vector3(p.x, 0.01, p.z));
+    roomPoints.forEach(pt => {
+      const marker = new THREE.Mesh(new THREE.SphereGeometry(0.03, 16, 16), new THREE.MeshBasicMaterial({ color: 0x4df0ff }));
+      marker.position.copy(pt);
+      scene.add(marker);
+      roomMarkers.push(marker);
+    });
+    updateOutlineLine();
+    document.getElementById('pointCount').textContent = 'Loaded ' + roomPoints.length + ' points from your Guardian boundary — tap FINISH SCAN, or adjust manually first';
+  } else {
+    document.getElementById('pointCount').textContent = 'No Guardian boundary found. Point your controller at each corner and pull the trigger.';
+  }
 }
 
 // ---------- room scan (corner tapping) ----------
@@ -685,6 +707,7 @@ function onResize() {
 }
 
 function render() {
+  checkGuardianBoundary();
   panels.forEach(p => {
     if (p.update) { p.update(p.ctx, p.canvas.width, p.canvas.height); p.tex.needsUpdate = true; }
   });
